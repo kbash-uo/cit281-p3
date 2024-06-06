@@ -1,0 +1,80 @@
+/*
+    CIT 281 Project 3
+    Name: Kieran Bash
+*/
+
+// p3-module.js
+function validDenomination(coin) {
+    return [1, 5, 10, 5, 50, 100].indexOf(coin) !== -1;
+}
+
+function valueFromCoinObject(obj) {
+    const { denom = 0, count = 0} = obj;
+    return denom * count;
+}
+
+function valueFromArray(arr) {
+    return arr.reduce((total, obj) => total + valueFromCoinObject(obj), 0);
+}
+
+function coinCount(...coinage) {
+    return valueFromArray(coinage);
+}
+
+module.exports = coinCount;
+
+//p3-server.js
+const fs = require('fs');
+
+const fastify = require('fastify')();
+
+const coinCount = require('./p3-module');
+
+fastify.get('/', (request, reply) => {
+  fs.readFile(__dirname + 'index.html', 'utf8', (err, data) => {
+    if (err) {
+      reply.code(500).send('Internal Server Error');
+      return;
+    }
+    reply.code(200).header('Content-Type', 'text/html; charset=utf-8').send(data);
+  });
+});
+
+fastify.get('/coin', (request, reply) => {
+  const { denom = 0, count = 0 } = request.query;
+  const denomInt = parseInt(denom);
+  const countInt = parseInt(count);
+  const coinValue = coinCount({ denom: denomInt, count: countInt });
+  const response = `<h2>Value of ${countInt} of ${denomInt} is ${coinValue}</h2><br /><a href="/">Home</a>`;
+  reply.code(200).header('Content-Type', 'text/html; charset=utf-8').send(response);
+});
+
+fastify.get('/coins', (request, reply) => {
+  const { option } = request.query;
+  let coinValue = 0;
+  switch (parseInt(option)) {
+    case 1:
+      coinValue = coinCount({ denom: 5, count: 3 }, { denom: 10, count: 2 });
+      break;
+    case 2:
+      coinValue = coinCount(...coins);
+      break;
+    case 3:
+      coinValue = coinCount(coins);
+      break;
+    default:
+      break;
+  }
+  const response = `<h2>Option ${option} value is ${coinValue}</h2><br /><a href="/">Home</a>`;
+  reply.code(200).header('Content-Type', 'text/html; charset=utf-8').send(response);
+});
+const listenIP = 'localhost';
+const listenPort = 8080;
+
+fastify.listen(listenPort, listenIP, (err, address) => {
+  if (err) {
+    console.error(err);
+    process.exit(1);
+  }
+  console.log(`Server listening on ${address}`);
+});
